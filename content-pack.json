@@ -1,0 +1,1427 @@
+{
+  "v": 1,
+  "id": "e6e0f4a2-199f-406e-b17e-5ed35a4dbcad",
+  "rev": 1,
+  "name": "SSH",
+  "summary": "SSH Analysis",
+  "description": "",
+  "vendor": "Locolandia",
+  "url": "https://github.com/xkill/graylog_4.1_ssh/",
+  "parameters": [],
+  "entities": [
+    {
+      "v": "1",
+      "type": {
+        "name": "grok_pattern",
+        "version": "1"
+      },
+      "id": "1344c747-5c09-4a98-a122-5b902e5a3545",
+      "data": {
+        "name": "SSH_REMOTE_SOCKET",
+        "pattern": "(%{IP:ssh_rip} port %{POSINT:ssh_rport})"
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "pipeline_rule",
+        "version": "1"
+      },
+      "id": "a5fc0ccb-4629-4768-8900-f59325bc1a74",
+      "data": {
+        "title": {
+          "@type": "string",
+          "@value": "extract_ssh_fields"
+        },
+        "description": {
+          "@type": "string",
+          "@value": ""
+        },
+        "source": {
+          "@type": "string",
+          "@value": "rule \"extract_ssh_fields\"\nwhen\n    has_field(\"application_name\") && to_string($message.application_name) == \"sshd\"\nthen\n    let msg = to_string($message.message);\n    let msg2 = regex_replace(\"Invalid user\", msg, \"Invalid user by invalid user\");\n    let parsed = grok(pattern: \"%{SSH}\", value: msg2, only_named_captures: true);\n    set_fields(parsed);\n    rename_field(\"ssh_rip\",\"remote_addr\");\n    rename_field(\"ssh_username\",\"username\");\nend"
+        }
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "grok_pattern",
+        "version": "1"
+      },
+      "id": "6e578fdc-5e55-40a0-bd0e-fbbf7b87c160",
+      "data": {
+        "name": "SSH_AUTH_RESULT",
+        "pattern": "(Accepted|Failed)"
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "grok_pattern",
+        "version": "1"
+      },
+      "id": "356815fe-b127-4e1d-98a5-d1e1856972b7",
+      "data": {
+        "name": "SSH",
+        "pattern": "(%{SSH_MESSAGE:ssh_message} (for|by|from)( %{SSH_USER_ADJECTIVE:ssh_user_adjective} user)?( %{USERNAME:ssh_username}( from)?)? %{SSH_REMOTE_SOCKET})"
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "grok_pattern",
+        "version": "1"
+      },
+      "id": "0ed4fc49-76bd-4ddb-8c22-832b515e201a",
+      "data": {
+        "name": "SSH_CONNECTION",
+        "pattern": "(Received disconnect|Connection closed|Disconnected)"
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "pipeline",
+        "version": "1"
+      },
+      "id": "a0dfce2a-fba8-4085-bb37-3b307d4c121f",
+      "data": {
+        "title": {
+          "@type": "string",
+          "@value": "SSH"
+        },
+        "description": {
+          "@type": "string",
+          "@value": "Parse ssh logs"
+        },
+        "source": {
+          "@type": "string",
+          "@value": "pipeline \"SSH\"\nstage 0 match either\nrule \"extract_ssh_fields\"\nend"
+        },
+        "connected_streams": [
+          {
+            "@type": "string",
+            "@value": "000000000000000000000001"
+          }
+        ]
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "grok_pattern",
+        "version": "1"
+      },
+      "id": "f9f7f49e-b256-48d3-a827-b9887b218da4",
+      "data": {
+        "name": "SSH_USER_ADJECTIVE",
+        "pattern": "(authenticating|invalid)"
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "dashboard",
+        "version": "2"
+      },
+      "id": "e1ec70e0-d350-49c4-bf9f-744fa571fd63",
+      "data": {
+        "summary": {
+          "@type": "string",
+          "@value": "SSH logs"
+        },
+        "search": {
+          "queries": [
+            {
+              "id": "e81c4907-8f29-4d5f-b0e6-8b283c0e91d1",
+              "timerange": {
+                "type": "relative",
+                "from": 604800
+              },
+              "query": {
+                "type": "elasticsearch",
+                "query_string": "application_name:sshd"
+              },
+              "search_types": [
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "application_name:sshd  AND ssh_auth_result:Accepted"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 604800
+                  },
+                  "streams": [],
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "Total",
+                      "field": "username"
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "field": "username",
+                      "limit": 15
+                    },
+                    {
+                      "type": "values",
+                      "field": "source",
+                      "limit": 15
+                    },
+                    {
+                      "type": "values",
+                      "field": "ssh_auth_method",
+                      "limit": 15
+                    },
+                    {
+                      "type": "values",
+                      "field": "remote_addr",
+                      "limit": 15
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "4afd861a-3884-4e63-9176-b496706853df",
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "application_name:sshd"
+                  },
+                  "name": null,
+                  "timerange": {
+                    "type": "relative",
+                    "from": 604800
+                  },
+                  "offset": 0,
+                  "streams": [],
+                  "filter": null,
+                  "decorators": [
+                    {
+                      "id": "5cfa6972330ccd01e18b3872",
+                      "type": "org.graylog2.decorators.LookupTableDecorator",
+                      "config": {
+                        "source_field": "response_status",
+                        "target_field": "response_status_description",
+                        "lookup_table_name": "http-status-codes-lookup"
+                      },
+                      "stream": null,
+                      "order": 0
+                    },
+                    {
+                      "id": "5e7f8684330ccd6014f1d2ec",
+                      "type": "org.graylog2.decorators.LookupTableDecorator",
+                      "config": {
+                        "source_field": "remote_addr",
+                        "target_field": "remote_hostname",
+                        "lookup_table_name": "InternalDNSHostsTable"
+                      },
+                      "stream": null,
+                      "order": 1
+                    }
+                  ],
+                  "type": "messages",
+                  "id": "14550bac-8d9c-4f0a-b95f-7349d4202b6a",
+                  "limit": 150
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "application_name:sshd AND ssh_auth_result:Accepted"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 604800
+                  },
+                  "streams": [],
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "field": "remote_addr_geolocation",
+                      "limit": 15
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "b1bff564-254f-4e3e-95e4-8ac5b25ff245",
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "application_name:sshd (7d)"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 604800
+                  },
+                  "streams": [],
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "Total",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "field": "ssh_message",
+                      "limit": 15
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "203dc1af-ad7d-4737-9f68-36b6407a1cbf",
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "application_name:sshd"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 604800
+                  },
+                  "streams": [],
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "time",
+                      "field": "timestamp",
+                      "interval": {
+                        "type": "auto",
+                        "scaling": 1
+                      }
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "d5efa0ec-bb24-49a3-8a44-836ff7f4c416",
+                  "column_groups": [],
+                  "sort": []
+                }
+              ]
+            },
+            {
+              "id": "fa1a500a-7b8c-4214-b7dd-ed0c6b016852",
+              "timerange": {
+                "type": "relative",
+                "from": 300
+              },
+              "query": {
+                "type": "elasticsearch",
+                "query_string": ""
+              },
+              "search_types": [
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "ssh_auth_result:Failed"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 604800
+                  },
+                  "streams": [],
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "Failed logons",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "time",
+                      "field": "timestamp",
+                      "interval": {
+                        "type": "auto",
+                        "scaling": 1
+                      }
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "3081fb3a-0847-4f26-8177-fb9eaa2b004f",
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "ssh_auth_result:Failed"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 604800
+                  },
+                  "streams": [],
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "Total",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "field": "remote_addr",
+                      "limit": 50
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "b2202582-c826-448c-8bce-d3e5400b7eab",
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "ssh_auth_result:Failed"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 604800
+                  },
+                  "streams": [],
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "Message Count",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [],
+                  "type": "pivot",
+                  "id": "e531d559-fbe4-4de3-8a30-a8a5c27ebf24",
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "ssh_auth_result:Failed"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 604800
+                  },
+                  "streams": [],
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "field": "remote_addr_geolocation",
+                      "limit": 15
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "43c3231d-86a5-4909-a6f0-c81a915faa2a",
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "ssh_auth_result:Failed"
+                  },
+                  "name": "trend",
+                  "timerange": {
+                    "type": "offset",
+                    "source": "search_type",
+                    "id": "e531d559-fbe4-4de3-8a30-a8a5c27ebf24",
+                    "offset": "1i"
+                  },
+                  "streams": [],
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "Message Count",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [],
+                  "type": "pivot",
+                  "id": "1c0b1a36-83fc-4479-a56d-9655413426a8",
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "ssh_auth_result:Failed"
+                  },
+                  "name": null,
+                  "timerange": {
+                    "type": "relative",
+                    "from": 86400
+                  },
+                  "offset": 0,
+                  "streams": [],
+                  "filter": null,
+                  "decorators": [],
+                  "type": "messages",
+                  "id": "0978e5fa-cfb4-4b6c-b1ac-a7154fc5ec72",
+                  "limit": 150
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "ssh_auth_result:Failed"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 604800
+                  },
+                  "streams": [],
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "Total",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "field": "username",
+                      "limit": 50
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "f8a6ae45-6121-41a5-b2dd-85a8133615f4",
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "name": "events",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 604800
+                  },
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "ssh_auth_result:Failed"
+                  },
+                  "streams": [],
+                  "id": "97e8a6e9-bf58-45e2-8c3c-c8672cbd2b4a",
+                  "type": "events",
+                  "filter": null
+                }
+              ]
+            }
+          ],
+          "parameters": [],
+          "requires": {},
+          "owner": "xkill",
+          "created_at": "2021-10-01T09:42:23.897Z"
+        },
+        "created_at": "2021-09-27T08:18:49.942Z",
+        "requires": {},
+        "state": {
+          "e81c4907-8f29-4d5f-b0e6-8b283c0e91d1": {
+            "selected_fields": null,
+            "static_message_list_id": null,
+            "titles": {
+              "widget": {
+                "d0c300d8-7fb5-405e-9a31-18d614a3f06e": "Message Count",
+                "e6cd8c0f-83c2-47f0-ad43-49c203fd3a2f": "All Messages",
+                "70387f62-bea7-4d47-bf6a-0b1c663bb130": "Accepted logins summary",
+                "77f2184b-e795-4a13-9a9a-562450f0aee4": "SSHd messages",
+                "9a8e5131-d505-4a3b-97b3-00fb7b58dbc1": "Accepted Logins Map"
+              },
+              "tab": {
+                "title": "SSH"
+              }
+            },
+            "widgets": [
+              {
+                "id": "d0c300d8-7fb5-405e-9a31-18d614a3f06e",
+                "type": "aggregation",
+                "filter": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 604800
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "application_name:sshd"
+                },
+                "streams": [],
+                "config": {
+                  "visualization": "area",
+                  "event_annotation": false,
+                  "row_pivots": [
+                    {
+                      "field": "timestamp",
+                      "type": "time",
+                      "config": {
+                        "interval": {
+                          "type": "auto",
+                          "scaling": 1
+                        }
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": null
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": true,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "interpolation": "spline"
+                  },
+                  "formatting_settings": null,
+                  "sort": []
+                }
+              },
+              {
+                "id": "77f2184b-e795-4a13-9a9a-562450f0aee4",
+                "type": "aggregation",
+                "filter": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 604800
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "application_name:sshd (7d)"
+                },
+                "streams": [],
+                "config": {
+                  "visualization": "table",
+                  "event_annotation": false,
+                  "row_pivots": [
+                    {
+                      "field": "ssh_message",
+                      "type": "values",
+                      "config": {
+                        "limit": 15
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total"
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": true,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                }
+              },
+              {
+                "id": "e6cd8c0f-83c2-47f0-ad43-49c203fd3a2f",
+                "type": "messages",
+                "filter": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 604800
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "application_name:sshd"
+                },
+                "streams": [],
+                "config": {
+                  "fields": [
+                    "timestamp",
+                    "source",
+                    "remote_addr",
+                    "ssh_message",
+                    "username"
+                  ],
+                  "show_message_row": true,
+                  "decorators": [
+                    {
+                      "id": "5cfa6972330ccd01e18b3872",
+                      "type": "org.graylog2.decorators.LookupTableDecorator",
+                      "config": {
+                        "source_field": "response_status",
+                        "target_field": "response_status_description",
+                        "lookup_table_name": "http-status-codes-lookup"
+                      },
+                      "stream": null,
+                      "order": 0
+                    },
+                    {
+                      "id": "5e7f8684330ccd6014f1d2ec",
+                      "type": "org.graylog2.decorators.LookupTableDecorator",
+                      "config": {
+                        "source_field": "remote_addr",
+                        "target_field": "remote_hostname",
+                        "lookup_table_name": "InternalDNSHostsTable"
+                      },
+                      "stream": null,
+                      "order": 1
+                    }
+                  ],
+                  "sort": [
+                    {
+                      "type": "pivot",
+                      "field": "timestamp",
+                      "direction": "Descending"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "9a8e5131-d505-4a3b-97b3-00fb7b58dbc1",
+                "type": "aggregation",
+                "filter": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 604800
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "application_name:sshd AND ssh_auth_result:Accepted"
+                },
+                "streams": [],
+                "config": {
+                  "visualization": "map",
+                  "event_annotation": false,
+                  "row_pivots": [
+                    {
+                      "field": "remote_addr_geolocation",
+                      "type": "values",
+                      "config": {
+                        "limit": 15
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": null
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": true,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "viewport": {
+                      "zoom": 1,
+                      "center_x": 0,
+                      "center_y": 0
+                    }
+                  },
+                  "formatting_settings": null,
+                  "sort": []
+                }
+              },
+              {
+                "id": "70387f62-bea7-4d47-bf6a-0b1c663bb130",
+                "type": "aggregation",
+                "filter": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 604800
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "application_name:sshd  AND ssh_auth_result:Accepted"
+                },
+                "streams": [],
+                "config": {
+                  "visualization": "table",
+                  "event_annotation": false,
+                  "row_pivots": [
+                    {
+                      "field": "username",
+                      "type": "values",
+                      "config": {
+                        "limit": 15
+                      }
+                    },
+                    {
+                      "field": "source",
+                      "type": "values",
+                      "config": {
+                        "limit": 15
+                      }
+                    },
+                    {
+                      "field": "ssh_auth_method",
+                      "type": "values",
+                      "config": {
+                        "limit": 15
+                      }
+                    },
+                    {
+                      "field": "remote_addr",
+                      "type": "values",
+                      "config": {
+                        "limit": 15
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total"
+                      },
+                      "function": "count(username)"
+                    }
+                  ],
+                  "rollup": true,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                }
+              }
+            ],
+            "widget_mapping": {
+              "d0c300d8-7fb5-405e-9a31-18d614a3f06e": [
+                "d5efa0ec-bb24-49a3-8a44-836ff7f4c416"
+              ],
+              "77f2184b-e795-4a13-9a9a-562450f0aee4": [
+                "203dc1af-ad7d-4737-9f68-36b6407a1cbf"
+              ],
+              "9a8e5131-d505-4a3b-97b3-00fb7b58dbc1": [
+                "b1bff564-254f-4e3e-95e4-8ac5b25ff245"
+              ],
+              "70387f62-bea7-4d47-bf6a-0b1c663bb130": [
+                "4afd861a-3884-4e63-9176-b496706853df"
+              ],
+              "e6cd8c0f-83c2-47f0-ad43-49c203fd3a2f": [
+                "14550bac-8d9c-4f0a-b95f-7349d4202b6a"
+              ]
+            },
+            "positions": {
+              "d0c300d8-7fb5-405e-9a31-18d614a3f06e": {
+                "col": 1,
+                "row": 28,
+                "height": 2,
+                "width": "Infinity"
+              },
+              "77f2184b-e795-4a13-9a9a-562450f0aee4": {
+                "col": 5,
+                "row": 24,
+                "height": 4,
+                "width": 4
+              },
+              "9a8e5131-d505-4a3b-97b3-00fb7b58dbc1": {
+                "col": 9,
+                "row": 24,
+                "height": 4,
+                "width": 4
+              },
+              "70387f62-bea7-4d47-bf6a-0b1c663bb130": {
+                "col": 1,
+                "row": 24,
+                "height": 4,
+                "width": 4
+              },
+              "e6cd8c0f-83c2-47f0-ad43-49c203fd3a2f": {
+                "col": 1,
+                "row": 30,
+                "height": 6,
+                "width": "Infinity"
+              }
+            },
+            "formatting": {
+              "highlighting": [
+                {
+                  "field": "ssh_message",
+                  "value": "Accepted password",
+                  "color": {
+                    "color": "#ffffe0",
+                    "type": "static"
+                  },
+                  "condition": "equal"
+                },
+                {
+                  "field": "ssh_message",
+                  "value": "Accepted publickey",
+                  "color": {
+                    "color": "#c9f3a6",
+                    "type": "static"
+                  },
+                  "condition": "equal"
+                }
+              ]
+            },
+            "display_mode_settings": {
+              "positions": {}
+            }
+          },
+          "fa1a500a-7b8c-4214-b7dd-ed0c6b016852": {
+            "selected_fields": null,
+            "static_message_list_id": null,
+            "titles": {
+              "tab": {
+                "title": "SSH failed logins analysis"
+              },
+              "widget": {
+                "89d47923-d17f-4004-8ae1-21690dd457af": "Top usernames",
+                "f4d43cad-c500-4727-a100-68970617d02b": "Failed logon trend",
+                "7b162376-9419-4e05-a517-8a397fb63972": "Failed logons map",
+                "c2ae0f04-7b13-4b22-8f63-61d6d67858d7": "Top IP addresses",
+                "55db9dcc-0199-4a68-891d-ad6a10945ee5": "Failed logons by date",
+                "8dd4ce2f-9d9e-461f-aa58-860ab81bc66b": "Failed logons"
+              }
+            },
+            "widgets": [
+              {
+                "id": "89d47923-d17f-4004-8ae1-21690dd457af",
+                "type": "aggregation",
+                "filter": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 604800
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "ssh_auth_result:Failed"
+                },
+                "streams": [],
+                "config": {
+                  "visualization": "table",
+                  "event_annotation": false,
+                  "row_pivots": [
+                    {
+                      "field": "username",
+                      "type": "values",
+                      "config": {
+                        "limit": 50
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total"
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": true,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                }
+              },
+              {
+                "id": "f4d43cad-c500-4727-a100-68970617d02b",
+                "type": "aggregation",
+                "filter": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 604800
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "ssh_auth_result:Failed"
+                },
+                "streams": [],
+                "config": {
+                  "visualization": "numeric",
+                  "event_annotation": false,
+                  "row_pivots": [],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Message Count"
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": true,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "trend": true,
+                    "trend_preference": "LOWER"
+                  },
+                  "formatting_settings": null,
+                  "sort": []
+                }
+              },
+              {
+                "id": "7b162376-9419-4e05-a517-8a397fb63972",
+                "type": "aggregation",
+                "filter": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 604800
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "ssh_auth_result:Failed"
+                },
+                "streams": [],
+                "config": {
+                  "visualization": "map",
+                  "event_annotation": false,
+                  "row_pivots": [
+                    {
+                      "field": "remote_addr_geolocation",
+                      "type": "values",
+                      "config": {
+                        "limit": 15
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": null
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": true,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "viewport": {
+                      "zoom": 1,
+                      "center_x": 0,
+                      "center_y": 0
+                    }
+                  },
+                  "formatting_settings": null,
+                  "sort": []
+                }
+              },
+              {
+                "id": "55db9dcc-0199-4a68-891d-ad6a10945ee5",
+                "type": "aggregation",
+                "filter": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 604800
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "ssh_auth_result:Failed"
+                },
+                "streams": [],
+                "config": {
+                  "visualization": "area",
+                  "event_annotation": true,
+                  "row_pivots": [
+                    {
+                      "field": "timestamp",
+                      "type": "time",
+                      "config": {
+                        "interval": {
+                          "type": "auto",
+                          "scaling": 1
+                        }
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Failed logons"
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": true,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "interpolation": "spline"
+                  },
+                  "formatting_settings": null,
+                  "sort": []
+                }
+              },
+              {
+                "id": "c2ae0f04-7b13-4b22-8f63-61d6d67858d7",
+                "type": "aggregation",
+                "filter": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 604800
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "ssh_auth_result:Failed"
+                },
+                "streams": [],
+                "config": {
+                  "visualization": "table",
+                  "event_annotation": false,
+                  "row_pivots": [
+                    {
+                      "field": "remote_addr",
+                      "type": "values",
+                      "config": {
+                        "limit": 50
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total"
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": true,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                }
+              },
+              {
+                "id": "8dd4ce2f-9d9e-461f-aa58-860ab81bc66b",
+                "type": "messages",
+                "filter": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 86400
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "ssh_auth_result:Failed"
+                },
+                "streams": [],
+                "config": {
+                  "fields": [
+                    "timestamp",
+                    "source",
+                    "remote_addr",
+                    "username",
+                    "ssh_message"
+                  ],
+                  "show_message_row": true,
+                  "decorators": [],
+                  "sort": [
+                    {
+                      "type": "pivot",
+                      "field": "timestamp",
+                      "direction": "Descending"
+                    }
+                  ]
+                }
+              }
+            ],
+            "widget_mapping": {
+              "89d47923-d17f-4004-8ae1-21690dd457af": [
+                "f8a6ae45-6121-41a5-b2dd-85a8133615f4"
+              ],
+              "f4d43cad-c500-4727-a100-68970617d02b": [
+                "e531d559-fbe4-4de3-8a30-a8a5c27ebf24",
+                "1c0b1a36-83fc-4479-a56d-9655413426a8"
+              ],
+              "7b162376-9419-4e05-a517-8a397fb63972": [
+                "43c3231d-86a5-4909-a6f0-c81a915faa2a"
+              ],
+              "c2ae0f04-7b13-4b22-8f63-61d6d67858d7": [
+                "b2202582-c826-448c-8bce-d3e5400b7eab"
+              ],
+              "55db9dcc-0199-4a68-891d-ad6a10945ee5": [
+                "97e8a6e9-bf58-45e2-8c3c-c8672cbd2b4a",
+                "3081fb3a-0847-4f26-8177-fb9eaa2b004f"
+              ],
+              "8dd4ce2f-9d9e-461f-aa58-860ab81bc66b": [
+                "0978e5fa-cfb4-4b6c-b1ac-a7154fc5ec72"
+              ]
+            },
+            "positions": {
+              "89d47923-d17f-4004-8ae1-21690dd457af": {
+                "col": 1,
+                "row": 9,
+                "height": 6,
+                "width": 2
+              },
+              "f4d43cad-c500-4727-a100-68970617d02b": {
+                "col": 1,
+                "row": 7,
+                "height": 2,
+                "width": 2
+              },
+              "7b162376-9419-4e05-a517-8a397fb63972": {
+                "col": 5,
+                "row": 10,
+                "height": 5,
+                "width": 8
+              },
+              "c2ae0f04-7b13-4b22-8f63-61d6d67858d7": {
+                "col": 3,
+                "row": 10,
+                "height": 5,
+                "width": 2
+              },
+              "55db9dcc-0199-4a68-891d-ad6a10945ee5": {
+                "col": 3,
+                "row": 7,
+                "height": 3,
+                "width": 10
+              },
+              "8dd4ce2f-9d9e-461f-aa58-860ab81bc66b": {
+                "col": 1,
+                "row": 15,
+                "height": 5,
+                "width": "Infinity"
+              }
+            },
+            "formatting": {
+              "highlighting": []
+            },
+            "display_mode_settings": {
+              "positions": {}
+            }
+          }
+        },
+        "properties": [],
+        "owner": "xkill",
+        "title": {
+          "@type": "string",
+          "@value": "SSH"
+        },
+        "type": "DASHBOARD",
+        "description": {
+          "@type": "string",
+          "@value": ""
+        }
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "grok_pattern",
+        "version": "1"
+      },
+      "id": "49a4a776-450a-4c5a-9e63-f369bcda687b",
+      "data": {
+        "name": "SSH_AUTH_METHOD",
+        "pattern": "(password|publickey)"
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "grok_pattern",
+        "version": "1"
+      },
+      "id": "d4be59e1-6eeb-47ca-b050-a4e0572aa95a",
+      "data": {
+        "name": "SSH_MESSAGE",
+        "pattern": "(%{SSH_AUTH_RESULT:ssh_auth_result} %{SSH_AUTH_METHOD:ssh_auth_method}|%{SSH_CONNECTION:ssh_connection}|Invalid user)"
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "grok_pattern",
+        "version": "1"
+      },
+      "id": "b642d861-7dbf-4ae1-bb46-d32133adcf70",
+      "data": {
+        "name": "IP",
+        "pattern": "(?:%{IPV6}|%{IPV4})"
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "grok_pattern",
+        "version": "1"
+      },
+      "id": "9504addf-2695-4254-975b-0420be1ca85c",
+      "data": {
+        "name": "POSINT",
+        "pattern": "\\b(?:[1-9][0-9]*)\\b"
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "grok_pattern",
+        "version": "1"
+      },
+      "id": "4fe29942-518d-4b03-adc6-7d48a0d138cf",
+      "data": {
+        "name": "USERNAME",
+        "pattern": "[a-zA-Z0-9._-]+"
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "grok_pattern",
+        "version": "1"
+      },
+      "id": "bdff49d0-5bb3-41c5-bb04-8943e90ff147",
+      "data": {
+        "name": "IPV6",
+        "pattern": "((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:)))(%.+)?"
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "grok_pattern",
+        "version": "1"
+      },
+      "id": "c0b7f9d6-55fb-4022-bd20-348d14fbd0aa",
+      "data": {
+        "name": "IPV4",
+        "pattern": "(?<![0-9])(?:(?:[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])[.](?:[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])[.](?:[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])[.](?:[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))(?![0-9])"
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=4.1.5+01c9198"
+        }
+      ]
+    }
+  ]
+}
