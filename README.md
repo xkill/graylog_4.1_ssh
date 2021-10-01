@@ -7,6 +7,6 @@ Graylog OpenSSH log parser and dashboards, based on @Trogper [graylog ssh extrac
 * To have maps working, ensure that the `GeoIP Resolver` processor is enabled after `Pipeline Processor`
 
 
-![Graylog SSH Dashboard](screenshots/Graylog_SSH_Dashboard.png)
-![Graylog SSH Failed logons Dashboard](screenshots/Graylog_SSH_failed_logons_Dashboard.png)
+![Graylog SSH Dashboard](https://raw.githubusercontent.com/xkill/graylog_4.1_ssh/main/screenshots/Graylog_SSH_Dashboard.png)
+![Graylog SSH Failed logons Dashboard](https://raw.githubusercontent.com/xkill/graylog_4.1_ssh/main/screenshots/Graylog_SSH_failed_logons_Dashboard.png)
 
