@@ -246,30 +246,6 @@
                   "offset": 0,
                   "streams": [],
                   "filter": null,
-                  "decorators": [
-                    {
-                      "id": "5cfa6972330ccd01e18b3872",
-                      "type": "org.graylog2.decorators.LookupTableDecorator",
-                      "config": {
-                        "source_field": "response_status",
-                        "target_field": "response_status_description",
-                        "lookup_table_name": "http-status-codes-lookup"
-                      },
-                      "stream": null,
-                      "order": 0
-                    },
-                    {
-                      "id": "5e7f8684330ccd6014f1d2ec",
-                      "type": "org.graylog2.decorators.LookupTableDecorator",
-                      "config": {
-                        "source_field": "remote_addr",
-                        "target_field": "remote_hostname",
-                        "lookup_table_name": "InternalDNSHostsTable"
-                      },
-                      "stream": null,
-                      "order": 1
-                    }
-                  ],
                   "type": "messages",
                   "id": "14550bac-8d9c-4f0a-b95f-7349d4202b6a",
                   "limit": 150
@@ -738,30 +714,6 @@
                     "username"
                   ],
                   "show_message_row": true,
-                  "decorators": [
-                    {
-                      "id": "5cfa6972330ccd01e18b3872",
-                      "type": "org.graylog2.decorators.LookupTableDecorator",
-                      "config": {
-                        "source_field": "response_status",
-                        "target_field": "response_status_description",
-                        "lookup_table_name": "http-status-codes-lookup"
-                      },
-                      "stream": null,
-                      "order": 0
-                    },
-                    {
-                      "id": "5e7f8684330ccd6014f1d2ec",
-                      "type": "org.graylog2.decorators.LookupTableDecorator",
-                      "config": {
-                        "source_field": "remote_addr",
-                        "target_field": "remote_hostname",
-                        "lookup_table_name": "InternalDNSHostsTable"
-                      },
-                      "stream": null,
-                      "order": 1
-                    }
-                  ],
                   "sort": [
                     {
                       "type": "pivot",
